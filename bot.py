@@ -1,6 +1,7 @@
 import os
 import asyncio
 import logging
+import uuid
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputFile
 from telegram.ext import (
     ApplicationBuilder,
@@ -43,7 +44,7 @@ TEXT = {
         "mp3": "🎵 Musiqani yuklab olish",
         "error": "❌ Yuklab bo‘lmadi",
         "help": "☎ Yordam uchun admin bilan bog‘laning: @shodiyeevv",
-        "choose_lang": "🌍 Tilni tanlang:"
+        "choose_lang": "🌍 Tilni tanlang / Выберите язык:"
     },
     "ru": {
         "start": (
@@ -107,21 +108,61 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ---------------- DOWNLOAD VIDEO ----------------
 def download_video(url: str):
-    # ✅ Instagram postlarni ham yuklash uchun cookies/login opsiyasi
+    """
+    Youtube / TikTok / Instagram videolarini 720p gacha yuklash uchun
+    """
+    uid = str(uuid.uuid4())  # unik fayl nomi
+
+    outtmpl = f"{DOWNLOADS}/{uid}.%(ext)s"
+
     opts = {
         "format": "bestvideo[height<=720]+bestaudio/best",
         "merge_output_format": "mp4",
-        "outtmpl": f"{DOWNLOADS}/%(id)s.%(ext)s",
-        "quiet": True,
+        "outtmpl": outtmpl,
         "noplaylist": True,
-        # Agar xohlasang login qo‘shish mumkin:
-        # "username": "INSTAGRAM_USERNAME",
-        # "password": "INSTAGRAM_PASSWORD",
-        # yoki "cookies": "cookies.txt"
+        "quiet": True,
+        "no_warnings": True,
+        "ignoreerrors": True,
+        "retries": 3,
+        "socket_timeout": 10,
+        # Agar xohlasang aria2c bilan tezroq yuklash:
+        # "external_downloader": "aria2c",
+        # "external_downloader_args": ["-x", "16", "-k", "1M"],
+
+        "postprocessors": [
+            {
+                "key": "FFmpegVideoConvertor",  # ⚠️ to'g'ri yozilishi: 'FFmpegVideoConvertor' ishlamaydi
+                "preferedformat": "mp4"
+            }
+        ],
+
+        "logger": logging.getLogger("yt_dlp.bot"),
+        "progress_hooks": [
+            lambda info: logging.info(
+                f"Yuklanmoqda: {info.get('filename','')} - "
+                f"{info.get('_percent_str','')} - {info.get('_eta_str','')}"
+            ) if info["status"] == "downloading" else None
+        ],
+        "default_search": "auto",
     }
+
     with YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=True)
-        return ydl.prepare_filename(info), info["id"]
+
+        # Agar playlist bo‘lsa, birinchi videoni olish
+        if "entries" in info and info["entries"]:
+            info = info["entries"][0]
+
+        # Fayl nomi tayyorlash
+        filename = ydl.prepare_filename(info)
+
+        # Agar format mp4 bo‘lmasa, xavfsiz o‘zgartirish
+        if not filename.endswith(".mp4"):
+            new_filename = f"{DOWNLOADS}/{info['id']}.mp4"
+            os.rename(filename, new_filename)
+            filename = new_filename
+
+    return filename, info["id"]
 
 # ---------------- DOWNLOAD AUDIO ----------------
 def download_audio(url: str, vid: str):
