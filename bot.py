@@ -32,9 +32,9 @@ TEXT = {
             "• TikTok (Suv belgisiz, HD)\n"
             "• YouTube (Video, Shorts, Audio)\n"
             "• Pinterest, Likee, Snapchat, Threads\n\n"
-            "🎵 Shazam & Qidiruv:\n"
-            "• Qo‘shiq nomi yoki ijrochi\n"
-            "• Audio / Video / Voice yuboring\n\n"
+            # "🎵 Shazam & Qidiruv:\n"
+            # "• Qo‘shiq nomi yoki ijrochi\n"
+            # "• Audio / Video / Voice yuboring\n\n"
             "🔗 Havolani yuboring yoki musiqa nomini yozing!"
         ),
         "wait": "⏳ Yuklanmoqda...",
