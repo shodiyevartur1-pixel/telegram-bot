@@ -2,12 +2,7 @@ import asyncio
 import logging
 import os
 from aiogram import Bot, Dispatcher, F
-from aiogram.types import (
-    Message,
-    InlineKeyboardMarkup,
-    InlineKeyboardButton,
-    CallbackQuery
-)
+from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.filters import Command
 from aiogram.enums import ChatMemberStatus
 import yt_dlp
@@ -15,6 +10,7 @@ import yt_dlp
 # ================= CONFIG =================
 
 BOT_TOKEN = "7440221707:AAFFYF9QuP1DyDAqGe232Z7tkOvsOolDn-4"
+ADMIN_ID = 8059999086
 ADMIN_USERNAME = "@shodiyeevv"
 CHANNEL_ID = -1003896595389
 CHANNEL_LINK = "https://t.me/+aLw1BSpmn_k0N2Ni"
@@ -26,32 +22,25 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# ============ KEYBOARDS ===================
+# ====== MEMORY (til saqlash uchun) ======
+
+user_languages = {}
+
+# ============ KEYBOARD ===================
 
 def subscribe_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="📢 Obuna bo‘lish", url=CHANNEL_LINK)
-        ],
-        [
-            InlineKeyboardButton(text="✅ Obuna bo‘ldim", callback_data="check_sub")
-        ]
+        [InlineKeyboardButton(text="📢 Obuna bo‘lish", url=CHANNEL_LINK)],
+        [InlineKeyboardButton(text="✅ Obuna bo‘ldim", callback_data="check_sub")]
     ])
 
-def main_menu():
+def language_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="🎬 Video yuklash", callback_data="download")
-        ],
-        [
-            InlineKeyboardButton(text="🌐 Language", callback_data="language")
-        ],
-        [
-            InlineKeyboardButton(text="❓ Help", callback_data="help")
-        ]
+        [InlineKeyboardButton(text="🇺🇿 O‘zbek", callback_data="lang_uz")],
+        [InlineKeyboardButton(text="🇷🇺 Русский", callback_data="lang_ru")]
     ])
 
-# ============ SUBSCRIBE CHECK ==============
+# ============ SUB CHECK ==================
 
 async def check_subscription(user_id):
     member = await bot.get_chat_member(CHANNEL_ID, user_id)
@@ -61,7 +50,7 @@ async def check_subscription(user_id):
         ChatMemberStatus.CREATOR
     ]
 
-# ============== START ======================
+# ============= START =====================
 
 @dp.message(Command("start"))
 async def start_handler(message: Message):
@@ -69,99 +58,113 @@ async def start_handler(message: Message):
 
     if not is_subscribed:
         await message.answer(
-            "👋 Assalomu alaykum!\n\n"
-            "Botdan foydalanish uchun avval kanalga obuna bo‘ling.",
+            "📢 Botdan foydalanish uchun kanalga obuna bo‘ling.",
             reply_markup=subscribe_keyboard()
         )
         return
 
     await message.answer(
         "🎉 Xush kelibsiz!\n\n"
-        "Instagram, TikTok, YouTube, Pinterest va boshqa platformalardan video yuklab beraman.\n\n"
-        "👇 Quyidagilardan birini tanlang:",
-        reply_markup=main_menu()
+        "🔗 Video link yuboring (Instagram, TikTok, YouTube, Pinterest)\n\n"
+        "Tilni o‘zgartirish: /language"
     )
 
-# ============= CHECK BUTTON ===============
+# ============= LANGUAGE ==================
+
+@dp.message(Command("language"))
+async def language_command(message: Message):
+    await message.answer("🌐 Tilni tanlang:", reply_markup=language_keyboard())
+
+@dp.callback_query(F.data.startswith("lang_"))
+async def set_language(callback: CallbackQuery):
+    lang = callback.data.split("_")[1]
+    user_languages[callback.from_user.id] = lang
+
+    if lang == "uz":
+        text = "🇺🇿 Til o‘zbek tiliga o‘zgartirildi!"
+    else:
+        text = "🇷🇺 Язык изменен на русский!"
+
+    await callback.answer("✅ Saqlandi!")
+    await callback.message.edit_text(text)
+
+# ============= HELP ======================
+
+@dp.message(Command("help"))
+async def help_handler(message: Message):
+    await message.answer(
+        "❓ Foydalanish:\n\n"
+        "1️⃣ Video link yuboring\n"
+        "2️⃣ Bot yuklab beradi\n\n"
+        f"👨‍💻 Admin: {ADMIN_USERNAME}"
+    )
+
+# ============= ADMIN =====================
+
+@dp.message(Command("admin"))
+async def admin_command(message: Message):
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("❌ Siz admin emassiz.")
+        return
+
+    await message.answer("👑 Admin panel ishlayapti ✅")
+
+# ============= SUB CHECK BUTTON ==========
 
 @dp.callback_query(F.data == "check_sub")
 async def check_sub_callback(callback: CallbackQuery):
     is_subscribed = await check_subscription(callback.from_user.id)
 
     if not is_subscribed:
-        await callback.answer("❌ Avval kanalga obuna bo‘ling!", show_alert=True)
+        await callback.answer("❌ Avval obuna bo‘ling!", show_alert=True)
         return
 
     await callback.message.edit_text(
         "✅ Obuna tasdiqlandi!\n\n"
-        "Botdan bemalol foydalanishingiz mumkin.",
-        reply_markup=main_menu()
+        "Endi link yuborishingiz mumkin 🚀"
     )
 
-# ============= HELP ========================
-
-@dp.message(Command("help"))
-async def help_handler(message: Message):
-    await message.answer(
-        "❓ Botdan foydalanish:\n\n"
-        "1️⃣ Video linkini yuboring\n"
-        "2️⃣ Bot yuklab beradi\n\n"
-        f"👨‍💻 Admin: {ADMIN_USERNAME}"
-    )
-
-# ============= LANGUAGE ====================
-
-@dp.message(Command("language"))
-async def language_handler(message: Message):
-    await message.answer(
-        "🌐 Hozircha til: 🇺🇿 O‘zbek\n"
-        "Tez orada boshqa tillar qo‘shiladi."
-    )
-
-# ============= VIDEO DOWNLOAD ==============
+# ============= VIDEO DOWNLOAD ============
 
 @dp.message(F.text)
 async def download_video(message: Message):
-    url = message.text
+    url = message.text.strip()
 
     if not url.startswith("http"):
         return
 
     is_subscribed = await check_subscription(message.from_user.id)
     if not is_subscribed:
-        await message.answer(
-            "❌ Avval kanalga obuna bo‘ling!",
-            reply_markup=subscribe_keyboard()
-        )
+        await message.answer("❌ Avval kanalga obuna bo‘ling!", reply_markup=subscribe_keyboard())
         return
 
-    await message.answer("⏳ Yuklab olinmoqda...")
+    waiting = await message.answer("⏳ Yuklanmoqda...")
 
     ydl_opts = {
-        'format': 'best',
-        'outtmpl': 'video.%(ext)s',
-        'quiet': True
+        'format': 'bestvideo+bestaudio/best',
+        'merge_output_format': 'mp4',
+        'outtmpl': '%(id)s.%(ext)s',
+        'quiet': True,
+        'noplaylist': True
     }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
-            file_name = ydl.prepare_filename(info)
+            filename = ydl.prepare_filename(info)
 
         await message.answer_video(
-            video=open(file_name, 'rb'),
-            caption="🎬 Mana siz so‘ragan video!"
+            video=open(filename, 'rb'),
+            caption="🎬 Tayyor!"
         )
 
-        os.remove(file_name)
+        os.remove(filename)
+        await waiting.delete()
 
-    except Exception:
-        await message.answer(
-            "❌ Video yuklab bo‘lmadi.\n"
-            "Link to‘g‘riligini tekshiring."
-        )
+    except Exception as e:
+        await waiting.edit_text("❌ Video yuklab bo‘lmadi.")
 
-# ===========================================
+# =========================================
 
 async def main():
     await dp.start_polling(bot)
