@@ -1,0 +1,6 @@
+      PID    PPID    PGID     WINPID   TTY         UID    STIME COMMAND
+      687       1     687      18472  ?         197609 18:43:17 /usr/bin/sh
+      473       1     473       4444  cons1     197609 18:25:39 /usr/bin/bash
+      428       1     428      13468  cons0     197609 18:25:22 /usr/bin/bash
+      688     687     687      15692  ?         197609 18:43:18 /c/Users/L.E.G.E.N.D.A/AppData/Local/Programs/Microsoft VS Code/Code
+      693     473     693       3836  cons1     197609 18:52:19 /usr/bin/PS
